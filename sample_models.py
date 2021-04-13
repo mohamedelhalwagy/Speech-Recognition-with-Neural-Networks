@@ -12,6 +12,7 @@ def simple_rnn_model(input_dim, output_dim=29):
     simp_rnn = GRU(output_dim, return_sequences=True, 
                  implementation=2, name='rnn')(input_data)
     # Add softmax activation layer
+    # Softmax is often used as the activation for the last layer of a classification network because the result could be interpreted as a probability distribution.
     y_pred = Activation('softmax', name='softmax')(simp_rnn)
     # Specify the model
     model = Model(inputs=input_data, outputs=y_pred)
@@ -28,10 +29,11 @@ def rnn_model(input_dim, units, activation, output_dim=29):
     simp_rnn = GRU(units, activation=activation,
         return_sequences=True, implementation=2, name='rnn')(input_data)
     # TODO: Add batch normalization 
-    bn_rnn = ...
+    bn_rnn = BatchNormalization()(simp_rnn)
     # TODO: Add a TimeDistributed(Dense(output_dim)) layer
-    time_dense = ...
+    time_dense = TimeDistributed(Dense(output_dim))(bn_rnn)
     # Add softmax activation layer
+    # Softmax converts a real vector to a vector of categorical probabilities.
     y_pred = Activation('softmax', name='softmax')(time_dense)
     # Specify the model
     model = Model(inputs=input_data, outputs=y_pred)

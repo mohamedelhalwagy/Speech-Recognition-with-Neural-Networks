@@ -102,9 +102,21 @@ def deep_rnn_model(input_dim, units, recur_layers, output_dim=29):
     # Main acoustic input
     input_data = Input(name='the_input', shape=(None, input_dim))
     # TODO: Add recurrent layers, each with batch normalization
-    ...
+    rnn_no_0 = GRU(units, activation='relu',return_sequences=True, implementation=2, name='frist_RNN')(input_data)
+    rnn_prev = rnn_no_0
+    # here: a for loop generating recur_layers ..:
+    for layer in range(1 , recur_layers ):
+        layer_name = "rnn_no_" +  str(layer)
+        rnn = GRU(units, activation="relu",return_sequences=True, 
+                 implementation=2, name=layer_name)(rnn_prev)
+        
+        batchnorm_name = "bn_" + str(layer)
+        rnn_out = BatchNormalization(name=batchnorm_name)(rnn)
+        rnn_prev = rnn_out
+        
+        
     # TODO: Add a TimeDistributed(Dense(output_dim)) layer
-    time_dense = ...
+    time_dense = TimeDistributed(Dense(output_dim))(rnn_out)
     # Add softmax activation layer
     y_pred = Activation('softmax', name='softmax')(time_dense)
     # Specify the model

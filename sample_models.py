@@ -109,11 +109,10 @@ def deep_rnn_model(input_dim, units, recur_layers, output_dim=29):
         layer_name = "rnn_no_" +  str(layer)
         rnn = GRU(units, activation="relu",return_sequences=True, 
                  implementation=2, name=layer_name)(rnn_prev)
-        
-        batchnorm_name = "bn_" + str(layer)
-        rnn_out = BatchNormalization(name=batchnorm_name)(rnn)
+        # Batch normalization is a technique for training very deep neural networks that standardizes the inputs to a layer for each mini-batch. This has the effect of stabilizing the learning process and dramatically reducing the number of training epochs required to train deep networks.
+        batch_name = "batch_no_" + str(layer)
+        rnn_out = BatchNormalization(name=batch_name)(rnn)
         rnn_prev = rnn_out
-        
         
     # TODO: Add a TimeDistributed(Dense(output_dim)) layer
     time_dense = TimeDistributed(Dense(output_dim))(rnn_out)
@@ -131,9 +130,11 @@ def bidirectional_rnn_model(input_dim, units, output_dim=29):
     # Main acoustic input
     input_data = Input(name='the_input', shape=(None, input_dim))
     # TODO: Add bidirectional recurrent layer
-    bidir_rnn = ...
+    # single bidirectional RNN layer, before a (TimeDistributed) dense layer ::
+    # tf.keras.layers.Bidirectional(layer, merge_mode="concat", weights=None, backward_layer=None, **kwargs
+    bidir_rnn = Bidirectional(GRU(units, activation="relu",return_sequences=True,implementation=2, name="bidir_rnn"))(input_data)
     # TODO: Add a TimeDistributed(Dense(output_dim)) layer
-    time_dense = ...
+    time_dense = TimeDistributed ( Dense(output_dim))(bidir_rnn)
     # Add softmax activation layer
     y_pred = Activation('softmax', name='softmax')(time_dense)
     # Specify the model

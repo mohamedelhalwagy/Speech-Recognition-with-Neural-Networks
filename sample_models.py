@@ -1,7 +1,7 @@
 from keras import backend as K
 from keras.models import Model
 from keras.layers import (BatchNormalization, Conv1D, Dense, Input, 
-    TimeDistributed, Activation, Bidirectional, SimpleRNN, GRU, LSTM)
+    TimeDistributed, Activation, Bidirectional, SimpleRNN, GRU, LSTM, Dropout, MaxPooling1D, Conv1D)
 
 def simple_rnn_model(input_dim, output_dim=29):
     """ Build a recurrent network for speech 
@@ -143,18 +143,38 @@ def bidirectional_rnn_model(input_dim, units, output_dim=29):
     print(model.summary())
     return model
 
-def final_model():
+def final_model(input_dim, filters, kernel_size, conv_stride,
+    conv_border_mode, units, output_dim=29):
     """ Build a deep network for speech 
     """
     # Main acoustic input
     input_data = Input(name='the_input', shape=(None, input_dim))
-    # TODO: Specify the layers in your network
-    ...
-    # TODO: Add softmax activation layer
-    y_pred = ...
+    # 1D convolution layer
+    # This layer creates a convolution kernel that is convolved with the layer input over a single spatial (or temporal) dimension to produce a tensor of outputs
+    conv_layer = Conv1D(filters, kernel_size, strides=conv_stride,padding=conv_border_mode, activation='relu',name='conv1d')(input_data) 
+    # maxpool : Downsamples the input representation by taking the maximum value over the window defined by pool_size.
+    maxpool_layer = MaxPooling1D(pool_size=9, strides=3, padding='valid')(conv_layer)
+    # Batch Normalization
+    conv1_normalized = BatchNormalization(name="maxpool_layer")(conv_layer)
+    # Bidirectionnal RNN
+    bidir_rnn_1 = Bidirectional(GRU(units, activation="relu",return_sequences=True,implementation=2, name="bidir_rnn"))(conv1_normalized)
+    bidir_rnn_2 = Bidirectional(GRU(units, activation="relu",return_sequences=True,implementation=2, name="bidir_rnn"))(bidir_rnn_1)
+    bidir_rnn_3 = Bidirectional(GRU(units, activation="relu",return_sequences=True,implementation=2, name="bidir_rnn"))(bidir_rnn_2) 
+    # Batch Normalization :
+    bidir_rnn_normalized = BatchNormalization(name="bidir_rnn_normalized")(bidir_rnn_3)
+    # Time distributed :
+    time_dense1 = TimeDistributed(Dense(output_dim))(bidir_rnn_normalized)
+    # The Dropout layer randomly sets input units to 0 with a frequency of rate at each step during training time, which helps prevent overfitting. Inputs not set to 0 are scaled up by 1/(1 - rate) such that the sum over all inputs is unchanged.
+    dropout = Dropout(0.4) (time_dense1)
+    # Time distributed
+    time_dense2 = TimeDistributed(Dense(output_dim))(dropout)
+    # Add softmax activation layer
+    y_pred = Activation('softmax', name='softmax')(time_dense2)
     # Specify the model
     model = Model(inputs=input_data, outputs=y_pred)
-    # TODO: Specify model.output_length
-    model.output_length = ...
+    # DONE: Specify model.output_length
+    model.output_length = lambda x: cnn_output_length(
+        x, kernel_size, conv_border_mode, conv_stride)
+    
     print(model.summary())
     return model
